@@ -52,18 +52,20 @@ jobs:
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USERNAME }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
+        password: ${{ secrets.SERVER_PASSWORD }}  # 改用密码认证
         port: ${{ secrets.SERVER_PORT }}
         script: |
+          set -x  # Enable debug mode
+          echo "Starting deployment..."
+          
           mkdir -p /home/${{ secrets.SERVER_USERNAME }}/todo
           cd /home/${{ secrets.SERVER_USERNAME }}/todo
           
-          # 使用 Deploy Key 拉取最新代码
-          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+          # 直接使用HTTPS克隆（避免SSH认证问题）
           if [ -d .git ]; then
-            git pull origin main
+            git pull https://github.com/wzb1024/todo.git main
           else
-            git clone git@github.com:wzb1024/todo.git .
+            git clone https://github.com/wzb1024/todo.git .
           fi
           
           # 停止并删除旧容器
@@ -82,6 +84,8 @@ jobs:
           
           # 清理未使用的镜像
           docker image prune -f
+          
+          echo "Deployment completed"
 
   build-desktop:
     needs: test
