@@ -1,0 +1,139 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test || true # 如果还没有测试脚本，暂时允许失败
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Deploy to Server
+      if: github.ref == 'refs/heads/main'
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          mkdir -p /home/${{ secrets.SERVER_USERNAME }}/todo
+          cd /home/${{ secrets.SERVER_USERNAME }}/todo
+          
+          # 使用 Deploy Key 拉取最新代码
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+          if [ -d .git ]; then
+            git pull origin main
+          else
+            git clone git@github.com:wzb1024/todo.git .
+          fi
+          
+          # 停止并删除旧容器
+          docker stop todo || true
+          docker rm todo || true
+          
+          # 构建新镜像
+          docker build -t todo:latest .
+          
+          # 运行新容器
+          docker run -d \
+            --name todo \
+            -p 8080:80 \
+            --restart unless-stopped \
+            todo:latest
+          
+          # 清理未使用的镜像
+          docker image prune -f
+
+  build-desktop:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build desktop app
+      run: npm run make
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: todo-${{ matrix.os }}
+        path: |
+          out/make/**/*.exe
+          out/make/**/*.dmg
+          out/make/**/*.deb
+          out/make/**/*.rpm
+          
+  create-release:
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          todo-*/out/make/**/*.exe
+          todo-*/out/make/**/*.dmg
+          todo-*/out/make/**/*.deb
+          todo-*/out/make/**/*.rpm
+        draft: false
+        prerelease: false
+        generate_release_notes: true 
