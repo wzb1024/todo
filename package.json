@@ -1,0 +1,65 @@
+{
+  "name": "todo",
+  "version": "1.0.0",
+  "description": "A Modern Todo Application",
+  "license": "ISC",
+  "author": {
+    "name": "wzb1024",
+    "email": "1251652012@qq.com",
+    "url": "https://github.com/wzb1024"
+  },
+  "homepage": "https://github.com/wzb1024/todo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wzb1024/todo"
+  },
+  "bugs": {
+    "url": "https://github.com/wzb1024/todo/issues",
+    "email": "1251652012@qq.com"
+  },
+  "keywords": [
+    "todo",
+    "electron",
+    "vue",
+    "desktop",
+    "application",
+    "task-management",
+    "productivity"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "cross-env NODE_ENV=development electron-forge start",
+    "start:prod": "npm run build && cross-env NODE_ENV=production electron-forge start",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make",
+    "dev:electron": "concurrently \"npm run dev\" \"wait-on tcp:5173 && npm start\""
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.6.0",
+    "@electron-forge/maker-deb": "^7.6.0",
+    "@electron-forge/maker-rpm": "^7.6.0",
+    "@electron-forge/maker-squirrel": "^7.6.0",
+    "@electron-forge/maker-zip": "^7.6.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.6.0",
+    "@electron-forge/plugin-fuses": "^7.6.0",
+    "@electron/fuses": "^1.8.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.0.0",
+    "terser": "^5.37.0",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "@electron/remote": "^2.1.2",
+    "bootstrap": "^5.3.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "flatpickr": "^4.6.13",
+    "sqlite3": "^5.1.7",
+    "vue": "^3.4.0"
+  }
+}

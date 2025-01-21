@@ -1,0 +1,79 @@
+/* Titlebar styles */
+.titlebar {
+  height: 30px;
+  background: #f5f5f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-drag {
+  flex: 1;
+  font-size: 14px;
+}
+
+.titlebar-buttons {
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-button {
+  background: none;
+  border: none;
+  padding: 4px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.titlebar-button:hover {
+  background-color: #e0e0e0;
+}
+
+/* Main content styles */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fa;
+}
+
+.container {
+  padding: 20px;
+}
+
+/* Todo input styles */
+.todo-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todo-input-group textarea {
+  resize: none;
+  height: 100px;
+}
+
+/* Todo list styles */
+.todo-list {
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+} 
