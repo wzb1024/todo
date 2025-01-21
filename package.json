@@ -35,7 +35,8 @@
     "start:prod": "npm run build && cross-env NODE_ENV=production electron-forge start",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
-    "dev:electron": "concurrently \"npm run dev\" \"wait-on tcp:5173 && npm start\""
+    "dev:electron": "concurrently \"npm run dev\" \"wait-on tcp:5173 && npm start\"",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.6.0",
