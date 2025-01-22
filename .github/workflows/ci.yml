@@ -12,6 +12,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Clean install
+        run: |
+          git clean -fdx
+          npm ci
+
       - uses: actions/checkout@v4
 
       - name: Use Node.js
