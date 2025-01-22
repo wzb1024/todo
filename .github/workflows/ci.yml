@@ -67,8 +67,13 @@ jobs:
             docker rm todo || true
             docker rmi todo:latest || true
             
-            # 构建新镜像
-            docker build -t todo:latest .
+            # 添加 Docker Hub 登录（即使拉取公共镜像）
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            
+            # 构建镜像时显式使用镜像加速
+            docker build \
+            --build-arg REGISTRY_MIRROR=https://registry.cn-hangzhou.aliyuncs.com \
+            -t todo:latest .
             
             # 运行新容器
             docker run -d \
