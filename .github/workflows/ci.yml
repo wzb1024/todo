@@ -79,9 +79,7 @@ jobs:
             docker run -d \
               --name todo \
               -p 8080:80 \
-              -v todo-data:/app/data \
               --restart unless-stopped \
-              --read-only \
               todo:latest
             
             # 清理未使用的镜像
@@ -92,7 +90,7 @@ jobs:
   build-desktop:
     needs: test
     runs-on: ${{ matrix.os }}
-#    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
 
     strategy:
       matrix:
@@ -135,7 +133,7 @@ jobs:
   create-release:
     needs: build-desktop
     runs-on: ubuntu-latest
-#    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Download all artifacts
