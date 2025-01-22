@@ -98,16 +98,10 @@ jobs:
         include:
           - os: ubuntu-latest
             pkg: .deb
-            platform: linux
-            build_dir: out/make/*.deb  # 更精确的路径匹配
           - os: windows-latest
             pkg: .exe
-            platform: win32
-            build_dir: out/make/*.exe
           - os: macos-latest
             pkg: .dmg
-            platform: darwin
-            build_dir: out/make/*.dmg
 
     steps:
       - uses: actions/checkout@v4
@@ -118,42 +112,23 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
-      - name: Install Linux Dependencies
+      - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-0 \
-            libnotify4 \
-            libnss3 \
-            libxss1 \
-            libgbm1 \
-            libasound2
+          sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 libxss1 libgbm1
 
-      - name: Install macOS Dependencies
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install -q create-dmg
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Clean Install Dependencies
-        run: npm ci --force  # 强制清理异常缓存
+      - name: Build desktop app
+        run: npm run make -- --platform ${{ matrix.os == 'macos-latest' && 'darwin' || matrix.os == 'windows-latest' && 'win32' || 'linux' }}
 
-      - name: Build Desktop App
-        run: npm run make -- --platform ${{ matrix.platform }}
-        env:
-          NODE_OPTIONS: --max_old_space_size=4096  # 防止内存不足
-
-      - name: Verify Build Output
-        run: |
-          echo "Build directory contents:"
-          ls -R out/make
-
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: todo-${{ matrix.os }}-${{ github.ref_name }}
-          path: ${{ matrix.build_dir }}
-          retention-days: 7
+          name: todo-${{ matrix.os }}
+          path: out/make/**/*${{ matrix.pkg }}
 
   create-release:
     needs: build-desktop
