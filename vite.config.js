@@ -5,17 +5,21 @@ const path = require('path')
 // https://vitejs.dev/config/
 module.exports = defineConfig({
   plugins: [vue()],
-  base: '/',
+  base: process.env.ELECTRON=="true" ? './' : '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false,
-    // 生产环境移除 console
+    sourcemap: process.env.NODE_ENV === 'development',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: process.env.NODE_ENV === 'production'
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
       }
     }
   },

@@ -46,11 +46,29 @@ const createWindow = async () => {
             mainWindow.webContents.openDevTools()
         } else {
             // In production, load the built files
-            await mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'))
+            const indexPath = path.join(__dirname, 'dist', 'index.html')
+            console.log('Loading production file from:', indexPath)
+            
+            try {
+                await mainWindow.loadFile(indexPath)
+            } catch (loadError) {
+                console.error('Failed to load index.html:', loadError)
+                // Try loading with file protocol
+                await mainWindow.loadURL(`file://${indexPath}`)
+            }
         }
     } catch (error) {
         console.error('Failed to load app:', error)
+        app.quit()
     }
+
+    // Enable DevTools in production for debugging if needed
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+            mainWindow.webContents.openDevTools()
+            event.preventDefault()
+        }
+    })
 
     // Handle window errors
     mainWindow.webContents.on('crashed', () => {
@@ -82,6 +100,7 @@ const createWindow = async () => {
 // This method will be called when Electron has finished initialization
 app.whenReady()
     .then(() => {
+        process.env.ELECTRON = "true"
         createWindow()
     })
     .catch((error) => {

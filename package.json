@@ -29,12 +29,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cross-env NODE_ENV=production ELECTRON=true vite build",
     "preview": "vite preview",
     "start": "cross-env NODE_ENV=development electron-forge start",
-    "start:prod": "npm run build && cross-env NODE_ENV=production electron-forge start",
+    "start:prod": "cross-env NODE_ENV=production npm run build && electron-forge start",
     "package": "npm run build && electron-forge package",
-    "make": "npm run build && electron-forge make",
+    "make": "cross-env NODE_ENV=production npm run build && electron-forge make",
     "dev:electron": "concurrently \"npm run dev\" \"wait-on tcp:5173 && npm start\"",
     "test": "echo \"No tests specified\" && exit 0"
   },
