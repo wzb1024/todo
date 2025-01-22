@@ -12,19 +12,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run tests
-      run: npm test || true # 如果还没有测试脚本，暂时允许失败
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
   build-and-deploy:
     needs: test
@@ -32,112 +32,117 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Build
-      run: npm run build
-    
-    - name: Deploy to Server
-      if: github.ref == 'refs/heads/main'
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USERNAME }}
-        password: ${{ secrets.SERVER_PASSWORD }}  # 改用密码认证
-        port: ${{ secrets.SERVER_PORT }}
-        script: |
-          set -x  # Enable debug mode
-          echo "Starting deployment..."
-          
-          mkdir -p /home/${{ secrets.SERVER_USERNAME }}/todo
-          cd /home/${{ secrets.SERVER_USERNAME }}/todo
-          
-          # 直接使用HTTPS克隆（避免SSH认证问题）
-          if [ -d .git ]; then
-            git pull https://github.com/wzb1024/todo.git main
-          else
-            git clone https://github.com/wzb1024/todo.git .
-          fi
-          
-          # 停止并删除旧容器
-          docker stop todo || true
-          docker rm todo || true
-          
-          # 构建新镜像
-          docker build -t todo:latest .
-          
-          # 运行新容器
-          docker run -d \
-            --name todo \
-            -p 8080:80 \
-            --restart unless-stopped \
-            todo:latest
-          
-          # 清理未使用的镜像
-          docker image prune -f
-          
-          echo "Deployment completed"
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}  # 使用 SSH Key
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            set -euxo pipefail
+            echo "=== Starting Deployment ==="
+            
+            # 配置工作目录
+            WORK_DIR="/home/${{ secrets.SERVER_USERNAME }}/todo"
+            mkdir -p ${WORK_DIR}
+            cd ${WORK_DIR}
+            
+            # 配置 Docker 镜像加速
+            sudo mkdir -p /etc/docker
+            echo '{"registry-mirrors": ["https://registry.cn-hangzhou.aliyuncs.com"]}' | sudo tee /etc/docker/daemon.json
+            sudo systemctl restart docker
+            
+            # 克隆或更新代码（使用 SSH）
+            if [ -d .git ]; then
+              git fetch --all
+              git reset --hard origin/main
+              git pull origin main
+            else
+              git clone git@github.com:${{ github.repository }}.git .
+            fi
+            
+            # 停止并清理旧容器
+            docker stop todo || true
+            docker rm todo || true
+            docker rmi todo:latest || true
+            
+            # 构建新镜像
+            docker build -t todo:latest .
+            
+            # 运行新容器
+            docker run -d \
+              --name todo \
+              -p 8080:8080 \
+              -v todo-data:/app/data \
+              --restart unless-stopped \
+              --read-only \
+              todo:latest
+            
+            # 清理未使用的镜像
+            docker image prune -f
+            
+            echo "=== Deployment Completed ==="
 
   build-desktop:
     needs: test
     runs-on: ${{ matrix.os }}
     if: startsWith(github.ref, 'refs/tags/v')
-    
+
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        
+        include:
+          - os: ubuntu-latest
+            pkg: .deb
+          - os: windows-latest
+            pkg: .exe
+          - os: macos-latest
+            pkg: .dmg
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Build desktop app
-      run: npm run make
-    
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: todo-${{ matrix.os }}
-        path: |
-          out/make/**/*.exe
-          out/make/**/*.dmg
-          out/make/**/*.deb
-          out/make/**/*.rpm
-          
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 libxss1 libgbm1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build desktop app
+        run: npm run make -- --platform ${{ matrix.os == 'macos-latest' && 'darwin' || matrix.os == 'windows-latest' && 'win32' || 'linux' }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: todo-${{ matrix.os }}
+          path: out/make/**/*${{ matrix.pkg }}
+
   create-release:
     needs: build-desktop
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    
+
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          todo-*/out/make/**/*.exe
-          todo-*/out/make/**/*.dmg
-          todo-*/out/make/**/*.deb
-          todo-*/out/make/**/*.rpm
-        draft: false
-        prerelease: false
-        generate_release_notes: true 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') }}
+          generate_release_notes: true

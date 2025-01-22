@@ -1,37 +1,57 @@
-# Build stage
-FROM node:20-alpine AS build-stage
+# ==================== 构建阶段 ====================
+FROM node:20-alpine AS builder
+
+# 安装编译依赖
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    sqlite-dev \
+    git \
+    openssh-client && \
+    ln -s /usr/bin/python3 /usr/bin/python
 
 WORKDIR /app
 
-# Copy package files
+# 安装依赖
 COPY package*.json ./
+RUN npm ci --production
 
-# Install dependencies
-RUN npm install
-
-# Copy project files
+# 复制源码
 COPY . .
 
-# Build the Vue application
-RUN npm run build
+# 构建应用
+RUN npm run build && \
+    npm prune --production
 
-# Production stage
-FROM nginx:alpine AS production-stage
+# ==================== 生产阶段 ====================
+FROM nginx:1.25-alpine
 
-# Copy built files from build stage
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+# 安装运行时依赖
+RUN apk add --no-cache sqlite && \
+    addgroup -S appuser && \
+    adduser -S appuser -G appuser && \
+    chown -R appuser:appuser /var/cache/nginx && \
+    chmod -R 755 /var/log/nginx
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 复制构建产物
+COPY --from=builder --chown=appuser:appuser /app/dist /usr/share/nginx/html
 
-# Add version information
-LABEL version="1.0.0"
-LABEL name="todo"
-LABEL description="A Modern Todo Application"
-LABEL maintainer="wzb1024 <1251652012@qq.com>"
+# 复制Nginx配置
+COPY --chown=appuser:appuser nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80
-EXPOSE 80
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:8080/health-check || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# 容器元数据
+LABEL org.opencontainers.image.title="Todo App" \
+      org.opencontainers.image.description="Modern Todo Application" \
+      org.opencontainers.image.url="https://github.com/your-repo" \
+      org.opencontainers.image.source="https://github.com/your-repo" \
+      org.opencontainers.image.licenses="MIT"
+
+# 运行配置
+EXPOSE 8080
+USER appuser
+CMD ["nginx", "-g", "daemon off;"]
