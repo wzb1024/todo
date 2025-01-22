@@ -1,3 +1,56 @@
+// 由于使用了 React，大部分渲染逻辑都移到了组件中
+// 这个文件主要处理与主进程的通信和数据持久化
+
+// 初始化数据库连接
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('Database location:', await window.api.getDbPath())
+})
+
+// 导出常用的 API 函数供组件使用
+export const todosApi = {
+  getAll: async () => {
+    try {
+      return await window.api.todos.getAll()
+    } catch (error) {
+      console.error('Error fetching todos:', error)
+      return []
+    }
+  },
+
+  add: async (text, date) => {
+    try {
+      return await window.api.todos.add(text, date)
+    } catch (error) {
+      console.error('Error adding todo:', error)
+      throw error
+    }
+  },
+
+  toggle: async (id) => {
+    try {
+      await window.api.todos.toggle(id)
+    } catch (error) {
+      console.error('Error toggling todo:', error)
+      throw error
+    }
+  },
+
+  delete: async (id) => {
+    try {
+      await window.api.todos.delete(id)
+    } catch (error) {
+      console.error('Error deleting todo:', error)
+      throw error
+    }
+  }
+}
+
+export const windowApi = {
+  minimize: () => window.api.window.minimize(),
+  maximize: () => window.api.window.maximize(),
+  close: () => window.api.window.close()
+}
+
 // 窗口控制
 document.getElementById('minimize-btn').addEventListener('click', () => {
     window.api.window.minimize();
@@ -293,14 +346,6 @@ todoForm.addEventListener('submit', async (e) => {
         todoInput.value = '';
         datePicker.clear();
     }
-});
-
-// 在文档加载完成后执行
-document.addEventListener('DOMContentLoaded', async () => {
-    // 显示数据库路径
-    console.log('Database location:', await window.api.getDbPath())
-    
-    // ... existing code ...
 });
 
 // 延迟初始化

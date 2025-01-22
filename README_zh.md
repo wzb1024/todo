@@ -67,11 +67,11 @@ npm run start:prod
 ## 技术栈
 
 ### 前端
-- **框架：** Vue 3
+- **框架：** React 18
 - **构建工具：** Vite
 - **UI框架：** Bootstrap 5
 - **日期选择器：** Flatpickr
-- **状态管理：** Vue Composition API
+- **状态管理：** React Hooks
 
 ### 后端（桌面版）
 - **运行时：** Electron

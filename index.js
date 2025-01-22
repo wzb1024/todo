@@ -10,6 +10,16 @@ require('@electron/remote/main').initialize()
 
 const isDev = process.env.NODE_ENV === 'development'
 
+// 热更新配置
+if (isDev) {
+  try {
+    require('electron-reloader')(module, {
+      debug: true,
+      watchRenderer: true
+    })
+  } catch (_) { console.log('Error') }
+}
+
 // 窗口配置
 const WINDOW_CONFIG = {
     width: 1200,
@@ -40,9 +50,15 @@ const createWindow = async () => {
     try {
         // In development, use Vite's dev server
         if (isDev) {
-            // Wait for Vite dev server to start
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            await mainWindow.loadURL('http://localhost:5173')
+            const tryLoad = async () => {
+                try {
+                    await mainWindow.loadURL('http://localhost:5173')
+                } catch (e) {
+                    console.log('Retrying to connect to dev server...')
+                    setTimeout(tryLoad, 1000)
+                }
+            }
+            await tryLoad()
             mainWindow.webContents.openDevTools()
         } else {
             // In production, load the built files
@@ -59,7 +75,10 @@ const createWindow = async () => {
         }
     } catch (error) {
         console.error('Failed to load app:', error)
-        app.quit()
+        // Don't quit in development mode
+        if (!isDev) {
+            app.quit()
+        }
     }
 
     // Enable DevTools in production for debugging if needed
@@ -80,11 +99,11 @@ const createWindow = async () => {
     })
 
     // Window control
-    ipcMain.on('minimize-window', () => {
+    ipcMain.on('window-minimize', () => {
         mainWindow.minimize()
     })
 
-    ipcMain.on('maximize-window', () => {
+    ipcMain.on('window-maximize', () => {
         if (mainWindow.isMaximized()) {
             mainWindow.unmaximize()
         } else {
@@ -92,7 +111,7 @@ const createWindow = async () => {
         }
     })
 
-    ipcMain.on('close-window', () => {
+    ipcMain.on('window-close', () => {
         mainWindow.close()
     })
 }

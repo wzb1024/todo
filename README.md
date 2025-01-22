@@ -67,11 +67,11 @@ npm run start:prod
 ## Technology Stack
 
 ### Frontend
-- **Framework:** Vue 3
+- **Framework:** React 18
 - **Build Tool:** Vite
 - **UI Framework:** Bootstrap 5
 - **Date Picker:** Flatpickr
-- **State Management:** Vue Composition API
+- **State Management:** React Hooks
 
 ### Backend (Desktop Version)
 - **Runtime:** Electron

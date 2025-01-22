@@ -1,27 +1,27 @@
-const { defineConfig } = require('vite')
-const vue = require('@vitejs/plugin-vue')
-const path = require('path')
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import path from 'path'
 
 // https://vitejs.dev/config/
-module.exports = defineConfig({
+export default defineConfig({
   plugins: [vue()],
   base: process.env.ELECTRON=="true" ? './' : '/',
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: true,
+    watch: {
+      usePolling: true,
+      interval: 100
+    },
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost'
+    }
+  },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    sourcemap: process.env.NODE_ENV === 'development',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: process.env.NODE_ENV === 'production',
-        drop_debugger: process.env.NODE_ENV === 'production'
-      }
-    },
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
-      }
-    }
+    assetsDir: 'assets'
   },
   resolve: {
     alias: {
