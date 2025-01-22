@@ -1,57 +1,37 @@
-# ==================== 构建阶段 ====================
-FROM node:20-alpine AS builder
-
-# 安装编译依赖
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite-dev \
-    git \
-    openssh-client && \
-    ln -s /usr/bin/python3 /usr/bin/python
+# Build stage
+FROM node:20-alpine AS build-stage
 
 WORKDIR /app
 
-# 安装依赖
+# Copy package files
 COPY package*.json ./
-RUN npm ci --production
 
-# 复制源码
+# Install dependencies
+RUN npm install
+
+# Copy project files
 COPY . .
 
-# 构建应用
-RUN npm run build && \
-    npm prune --production
+# Build the Vue application
+RUN npm run build
 
-# ==================== 生产阶段 ====================
-FROM nginx:alpine
+# Production stage
+FROM nginx:alpine AS production-stage
 
-# 安装运行时依赖
-RUN apk add --no-cache sqlite && \
-    addgroup -S appuser && \
-    adduser -S appuser -G appuser && \
-    chown -R appuser:appuser /var/cache/nginx && \
-    chmod -R 755 /var/log/nginx
+# Copy built files from build stage
+COPY --from=build-stage /app/dist /usr/share/nginx/html
 
-# 复制构建产物
-COPY --from=builder --chown=appuser:appuser /app/dist /usr/share/nginx/html
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 复制Nginx配置
-COPY --chown=appuser:appuser nginx.conf /etc/nginx/conf.d/default.conf
+# Add version information
+LABEL version="1.0.0"
+LABEL name="todo"
+LABEL description="A Modern Todo Application"
+LABEL maintainer="wzb1024 <1251652012@qq.com>"
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:8080/health-check || exit 1
+# Expose port 80
+EXPOSE 80
 
-# 容器元数据
-LABEL org.opencontainers.image.title="Todo App" \
-      org.opencontainers.image.description="Modern Todo Application" \
-      org.opencontainers.image.url="https://github.com/your-repo" \
-      org.opencontainers.image.source="https://github.com/your-repo" \
-      org.opencontainers.image.licenses="MIT"
-
-# 运行配置
-EXPOSE 8080
-USER appuser
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
