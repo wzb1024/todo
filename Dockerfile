@@ -25,7 +25,7 @@ RUN npm run build && \
     npm prune --production
 
 # ==================== 生产阶段 ====================
-FROM nginx:1.25-alpine
+FROM nginx:alpine
 
 # 安装运行时依赖
 RUN apk add --no-cache sqlite && \
